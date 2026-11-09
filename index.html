@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IoT Duo — Aprenda Internet das Coisas</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#58cc02">
+<style>
+  :root{ --green:#58cc02; --green-dark:#58a700; --blue:#1cb0f6; --blue-dark:#1899d6; --red:#ff4b4b; --yellow:#ffc800; --gray:#e5e5e5; --gray-dark:#afafaf; --bg:#fff; --text:#3c3c3c; --purple:#ce82ff; --orange:#ff9600; }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Nunito',-apple-system,Segoe UI,Roboto,sans-serif}
+  body{background:var(--bg);color:var(--text);max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+  
+  .topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:2px solid var(--gray);position:sticky;top:0;background:#fff;z-index:10}
+  .stat{display:flex;align-items:center;gap:6px;font-weight:800;font-size:18px}
+  .stat.streak{color:var(--orange)} .stat.gems{color:var(--blue)} .stat.hearts{color:var(--red)} .stat.xp{color:var(--yellow)}
+  .topbar-actions{display:flex; gap:8px;}
+  .icon-btn{background:none; border:none; font-size:20px; cursor:pointer; padding:4px 6px; border-radius:8px;}
+  .icon-btn:hover{ background:rgba(0,0,0,.08); }
+
+  .screen{display:none;flex:1;padding:20px;flex-direction:column}
+  .screen.active{display:flex}
+  
+  .home-title{font-size:26px;font-weight:900;margin-bottom:4px} .home-sub{color:#777;font-size:14px;margin-bottom:24px}
+  .module{background:#fff;border:2px solid var(--gray);border-radius:16px;padding:16px;margin-bottom:14px;display:flex;gap:14px;align-items:center;cursor:pointer;transition:.2s;position:relative}
+  .module:hover{border-color:var(--green);transform:translateY(-2px)} .module.locked{opacity:.55;cursor:not-allowed}
+  .module.completed{border-color:var(--green);background:#f0fff0}
+  .mod-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+  .mod-info{flex:1} .mod-info h3{font-size:16px;font-weight:800;margin-bottom:4px} .mod-info p{font-size:13px;color:#777}
+  .mod-progress{margin-top:6px;height:8px;background:var(--gray);border-radius:4px;overflow:hidden} .mod-progress > div{height:100%;background:var(--green);transition:.4s}
+  .check{position:absolute;top:12px;right:12px;font-size:20px;color:var(--green)}
+  
+  .lesson-header{display:flex;align-items:center;gap:12px;margin-bottom:20px} .back-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray-dark)}
+  .lesson-bar{flex:1;height:14px;background:var(--gray);border-radius:7px;overflow:hidden} .lesson-bar > div{height:100%;background:var(--green);transition:.3s}
+  .question-card{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .q-tag{font-size:12px;font-weight:800;color:var(--blue);text-transform:uppercase;margin-bottom:8px}
+  .q-text{font-size:22px;font-weight:800;line-height:1.35;margin-bottom:26px}
+  .options{display:flex;flex-direction:column;gap:12px}
+  .opt{background:#fff;border:2px solid var(--gray);border-bottom-width:4px;border-radius:14px;padding:16px;font-size:16px;font-weight:700;text-align:left;cursor:pointer;transition:.15s;color:var(--text)}
+  .opt:hover:not(:disabled){background:#f7f7f7} .opt.correct{background:#d7ffb8;border-color:var(--green);color:var(--green-dark)}
+  .opt.wrong{background:#ffdfe0;border-color:var(--red);color:var(--red)}
+  
+  .q-image{background:#f7f7f7;border-radius:16px;padding:16px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;min-height:160px;border:1px solid #e0e0e0}
+  .q-image svg{max-width:100%;height:auto;max-height:220px;}
+
+  .footer{border-top:2px solid var(--gray);padding:16px;background:#fff;position:sticky;bottom:0}
+  .btn{width:100%;background:var(--green);color:#fff;border:none;border-bottom:4px solid var(--green-dark);border-radius:14px;padding:16px;font-size:17px;font-weight:800;text-transform:uppercase;cursor:pointer;transition:.1s}
+  .btn:active{transform:translateY(2px);border-bottom-width:2px} .btn:disabled{background:var(--gray);border-color:var(--gray-dark);color:var(--gray-dark)}
+  .btn.blue{background:var(--blue);border-color:var(--blue-dark)}
+
+  .result{text-align:center;justify-content:center;align-items:center;gap:20px}
+  .result .big-emoji{font-size:80px} .result h2{font-size:28px;font-weight:900}
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;margin-top:10px}
+  .stat-box{background:#fff;border:2px solid var(--gray);border-radius:14px;padding:16px}
+  .stat-box .label{font-size:12px;color:#777;font-weight:700;text-transform:uppercase;margin-bottom:6px}
+  .stat-box .val{font-size:24px;font-weight:900}
+
+  .feedback{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;padding:16px;background:#d7ffb8;border-top:2px solid var(--green);display:none;z-index:20}
+  .feedback.show{display:block} .feedback.wrong{background:#ffdfe0;border-color:var(--red)}
+  .feedback h4{font-size:18px;font-weight:900;margin-bottom:4px;color:var(--green-dark)} .feedback.wrong h4{color:var(--red)}
+  .feedback p{font-size:14px;color:#555;margin-bottom:12px}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.show{display:flex} .modal-card{background:#fff;border-radius:20px;padding:24px;text-align:center;max-width:360px;width:100%}
+
+  .review-badge{position:fixed; bottom:20px; right:20px; background:var(--orange); color:#fff; border:none; width:60px; height:60px; border-radius:50%; font-size:24px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; z-index:15;}
+  .review-badge .count{position:absolute; top:-4px; right:-4px; background:var(--red); color:#fff; font-size:12px; font-weight:900; border-radius:10px; padding:2px 6px;}
+  .review-badge.hidden{ display:none; }
+  .dashboard-btn{position:fixed; bottom:20px; left:20px; background:var(--blue); color:#fff; border:none; width:60px; height:60px; border-radius:50%; font-size:24px; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; z-index:15;}
+
+  .review-header{display:flex;align-items:center;gap:12px;margin-bottom:16px} .review-title{font-size:22px;font-weight:900}
+  .error-card{background:#fff; border:2px solid var(--gray); border-radius:16px; padding:16px; margin-bottom:12px; cursor:pointer;}
+  .td-block{border-left:4px solid var(--blue); padding:12px 16px; margin-bottom:16px; background:#f5fbff; border-radius:0 12px 12px 0;}
+  .td-block.green{border-color:var(--green); background:#f0fff0;} .td-block.red{border-color:var(--red); background:#fff5f5;}
+  .td-block.orange{border-color:var(--orange); background:#fff8f0;}
+  
+  .donut{width:100px; height:100px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:900; color:var(--text); position:relative; margin: 0 auto;}
+  .donut::before{content:''; position:absolute; inset:12px; background:#fff; border-radius:50%;}
+  .donut span{ position:relative; z-index:1; }
+
+  .toast-container{position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:100; display:flex; flex-direction:column; gap:8px; pointer-events:none;}
+  .toast{background:#2a2a2a; color:#fff; padding:12px 20px; border-radius:12px; font-size:14px; font-weight:700; box-shadow:0 4px 12px rgba(0,0,0,.3); opacity:0; transform:translateY(-20px); transition:.3s; pointer-events:auto;}
+  .toast.show{opacity:1; transform:translateY(0);} .toast.success{background:var(--green);} .toast.error{background:var(--red);} .toast.info{background:var(--blue);}
+
+  /* CIRCUITO */
+  .circuit-screen{padding:16px; display:flex; flex-direction:column; height:calc(100vh - 60px);}
+  .toolbox{display:flex; gap:8px; overflow-x:auto; padding:8px 0; border-bottom:2px solid var(--gray); margin-bottom:8px; flex-shrink:0;}
+  .tool-item{flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; background:#fff; border:2px solid var(--gray); border-radius:12px; cursor:grab; min-width:70px;}
+  .canvas{flex:1; background:radial-gradient(circle, #e5e5e5 1px, transparent 1px) 0 0 / 20px 20px, #fafafa; border:2px dashed var(--gray); border-radius:12px; position:relative; overflow:hidden; touch-action:none;}
+  .placed{position:absolute; background:#fff; border:2px solid var(--gray); border-radius:10px; padding:8px 10px; cursor:move; display:flex; flex-direction:column; align-items:center; gap:2px; box-shadow:0 2px 6px rgba(0,0,0,.1); touch-action:none; z-index:2;}
+  .placed .pins{display:flex; gap:4px; margin-top:4px; flex-wrap:wrap; justify-content:center;}
+  .placed .pin{width:14px; height:14px; border-radius:50%; background:#ccc; border:2px solid #999; cursor:crosshair;}
+  .placed .pin.connected{background:var(--green); border-color:var(--green-dark);}
+  .wires-svg{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:1;}
+  .wire{stroke:var(--red); stroke-width:3; fill:none; stroke-linecap:round; stroke-linejoin:round;}
+  .circuit-actions{display:flex; gap:8px; margin-top:12px;} .circuit-actions .btn{flex:1; padding:12px; font-size:14px;}
+
+  body.dark{--bg:#1a1a1a; --text:#f0f0f0; --gray:#3a3a3a; --gray-dark:#666;}
+  body.dark .topbar, body.dark .footer, body.dark .module, body.dark .dash-card, body.dark .stat-box, body.dark .modal-card, body.dark .error-card, body.dark .tool-item, body.dark .placed { background:#2a2a2a; border-color:#3a3a3a; }
+  body.dark .opt{ background:#2a2a2a; border-color:#3a3a3a; }
+  body.dark .q-image{ background:#252525; border-color:#333; }
+  body.dark .feedback{ background:#1a3a1a; border-color:var(--green); } body.dark .feedback.wrong{ background:#3a1a1a; border-color:var(--red); }
+  body.dark .td-block{ background:#252525; } body.dark .td-block.green{ background:#1a2a1a; } body.dark .td-block.red{ background:#2a1a1a; } body.dark .td-block.orange{ background:#2a2015; }
+  body.dark .canvas{ background: radial-gradient(circle, #333 1px, transparent 1px) 0 0 / 20px 20px, #1e1e1e; border-color:#3a3a3a; }
+  body.dark .donut::before{ background:#2a2a2a; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="stat streak"><span class="icon">🔥</span><span id="streak">0</span></div>
+  <div class="stat gems"><span class="icon">💎</span><span id="gems">0</span></div>
+  <div class="stat hearts"><span class="icon">❤️</span><span id="hearts">5</span></div>
+  <div class="stat xp"><span class="icon">⚡</span><span id="xp">0</span></div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Modo escuro">🌙</button>
+  </div>
+</div>
+
+<div id="home" class="screen active">
+  <h1 class="home-title">Aprenda IoT 🚀</h1>
+  <p class="home-sub">Do zero ao ESP32, MQTT e FreeRTOS</p>
+  <div id="modules-list"></div>
+</div>
+
+<div id="lesson" class="screen">
+  <div class="lesson-header">
+    <button class="back-btn" onclick="quitLesson()">✕</button>
+    <div class="lesson-bar"><div id="lesson-progress" style="width:0%"></div></div>
+  </div>
+  <div class="question-card"></div>
+</div>
+
+<div id="result" class="screen result">
+  <div class="big-emoji" id="res-emoji">🎉</div>
+  <h2 id="res-title">Lição completa!</h2>
+  <p id="res-sub" style="color:#777">Você está aprendendo rápido</p>
+  <div class="stats-grid">
+    <div class="stat-box"><div class="label">XP ganho</div><div class="val" id="res-xp" style="color:var(--yellow)">+0</div></div>
+    <div class="stat-box"><div class="label">Acertos</div><div class="val" id="res-score" style="color:var(--green)">0/0</div></div>
+  </div>
+  <button class="btn" onclick="goHome()" style="margin-top:20px">CONTINUAR</button>
+</div>
+
+<div class="feedback" id="feedback">
+  <h4 id="fb-title">Muito bem!</h4>
+  <p id="fb-text"></p>
+  <button class="btn" id="fb-btn" onclick="nextQuestion()">CONTINUAR</button>
+</div>
+
+<button class="dashboard-btn" onclick="openDashboard()" title="Dashboard">📊</button>
+<button class="dashboard-btn" onclick="openChallenges()" title="Desafios" style="left:90px; background:var(--purple)">🎮</button>
+<button class="review-badge hidden" id="review-badge" onclick="openReview()" title="Revisar erros">🧠<span class="count" id="review-count">0</span></button>
+
+<div id="dashboard" class="screen">
+  <div class="review-header">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div class="review-title">📊 Seu progresso</div>
+  </div>
+  <div style="margin-bottom:14px">
+    <div class="donut" id="donut"><span id="donut-pct">0%</span></div>
+    <p style="text-align:center; font-size:12px; color:#777; margin-top:8px">Aproveitamento geral</p>
+  </div>
+</div>
+
+<div id="review" class="screen">
+  <div class="review-header">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div class="review-title">🧠 Revisar erros</div>
+  </div>
+  <p class="review-sub">Modo engenharia reversa: aprende do erro ao conceito.</p>
+  <div id="review-list"></div>
+</div>
+
+<div id="topdown" class="screen">
+  <div class="review-header">
+    <button class="back-btn" onclick="openReview()">←</button>
+    <div class="review-title">🔍 Dissecação da questão</div>
+  </div>
+  <div id="td-content"></div>
+</div>
+
+<div id="challenges" class="screen">
+  <div class="review-header">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <div class="review-title">🎮 Desafios práticos</div>
+  </div>
+  <p class="review-sub">Monte circuitos arrastando componentes.</p>
+  <div class="challenge-list" id="challenge-list"></div>
+</div>
+
+<div id="circuit-editor" class="screen circuit-screen">
+  <div class="review-header">
+    <button class="back-btn" onclick="exitCircuit()">←</button>
+    <div class="review-title" id="circuit-title">Desafio</div>
+  </div>
+  <p class="circuit-sub" id="circuit-desc"></p>
+  <div class="toolbox" id="toolbox"></div>
+  <div class="canvas" id="canvas">
+    <svg class="wires-svg" id="wires-svg"><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="var(--red)"/></marker></defs></svg>
+  </div>
+  <div class="circuit-actions">
+    <button class="btn blue" onclick="resetCanvas()">LIMPAR</button>
+    <button class="btn" onclick="validateCircuit()">VERIFICAR ✓</button>
+  </div>
+</div>
+
+<div class="circuit-result" id="circuit-result">
+  <div class="modal-card">
+    <div class="big-emoji" id="result-emoji">🎉</div>
+    <h2 id="result-title">Circuito correto!</h2>
+    <p id="result-desc"></p>
+    <div class="feedback-list" id="result-feedback" style="text-align:left; font-size:12px; margin:16px 0;"></div>
+    <button class="btn" onclick="closeResult()">CONTINUAR</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const MODULES = [
+  {
+    id: 1, title: "Fundamentos de IoT", icon: "🌐", color: "#1cb0f6", desc: "O que é, história e aplicações",
+    lessons: [
+      {
+        title: "O que é IoT?",
+        questions: [
+          { q: "Quem cunhou o termo 'Internet das Coisas' em 1999?", o: ["Kevin Ashton", "Steve Jobs", "Tim Berners-Lee", "Bill Gates"], a: 0, exp: "Kevin Ashton, no MIT Auto-ID Center, usou o termo em 1999.", td: { conceito: "IoT nasceu do RFID no MIT.", dissecao: "Testa o nome do 'pai' da IoT.", porqueErrada: "Jobs/Gates/Berners-Lee são da computação pessoal/Web.", porqueCerta: "Kevin Ashton usou 'IoT' em 1999." } },
+          { q: "IoT significa literalmente:", o: ["Internet of Things", "Internet of Transmissions", "Interconnected Objects Technology", "Integrated Online Things"], a: 0, exp: "Internet of Things.", td: { conceito: "Sigla internacional em inglês.", dissecao: "Vocabulário exato da sigla.", porqueErrada: "Alternativas inventam termos técnicos falsos.", porqueCerta: "Internet of Things." } },
+          { q: "Qual o principal objetivo da IoT?", o: ["Conectar objetos à internet para trocar dados", "Substituir a internet tradicional", "Criar redes sociais", "Apenas armazenar dados"], a: 0, exp: "Conectar objetos do dia a dia.", td: { conceito: "Extensão da internet para o físico.", dissecao: "Pede o objetivo principal.", porqueErrada: "Nuvem é consequência. Substituir a Internet é absurdo.", porqueCerta: "Trocar dados entre objetos e usuários." } }
+        ]
+      }
+    ]
+  },
+  {
+    id: 2, title: "Arquiteturas & Cloud/Edge", icon: "☁️", color: "#ce82ff", desc: "Camadas, Fog, Edge e Big Data",
+    lessons: [
+      {
+        title: "Camadas de IoT",
+        questions: [
+          { q: "Qual a camada mais baixa da arquitetura IoT?", o: ["Percepção (sensores)", "Aplicação", "Rede", "Negócios"], a: 0, exp: "A camada de percepção.", td: { conceito: "Arquitetura: percepção, rede, aplicação.", dissecao: "Camada que toca o mundo físico.", porqueErrada: "Aplicação fica no topo.", porqueCerta: "Percepção/sensores é a base." } },
+          { q: "Onde processar dados se precisar de respostas ultra-rápidas?", o: ["Na Edge (borda)", "Na Cloud", "No Fog", "No browser"], a: 0, exp: "Edge Computing.", td: { conceito: "Trade-off Cloud x Fog x Edge.", dissecao: "Menor latência possível.", porqueErrada: "Cloud tem ida e volta (latência).", porqueCerta: "Edge processa no hardware local." } }
+        ]
+      }
+    ]
+  },
+  {
+    id: 3, title: "Comunicação Sem Fio", icon: "📡", color: "#58cc02", desc: "WiFi, LoRa, Zigbee, Bluetooth",
+    lessons: [
+      {
+        title: "Tecnologias",
+        questions: [
+          { q: "Maior alcance em área urbana (~10 km) e baixo consumo?", o: ["LoRa", "WiFi", "Bluetooth", "Zigbee"], a: 0, exp: "LoRa.", td: { conceito: "Trade-off: alcance x consumo x velocidade.", dissecao: "Longo alcance + baixo consumo.", porqueErrada: "WiFi/BT/Zigbee têm alcance curto.", porqueCerta: "LoRa atinge 10km com baixíssimo consumo." } },
+          { q: "Qual NÃO é tecnologia de transmissão IoT?", o: ["HTML5", "Zigbee", "NB-IoT", "SigFox"], a: 0, exp: "HTML5 é marcação.", td: { conceito: "Transmissão opera no rádio.", dissecao: "Três são rádios, uma é linguagem.", porqueErrada: "HTML5 não transmite bits por rádio.", porqueCerta: "Zigbee, NB-IoT e SigFox são rádios." } }
+        ]
+      }
+    ]
+  },
+  {
+    id: 4, title: "Protocolos", icon: "🔌", color: "#ff9600", desc: "MQTT, CoAP, HTTP",
+    lessons: [
+      {
+        title: "MQTT",
+        questions: [
+          { q: "O MQTT usa qual modelo?", o: ["Publish/Subscribe", "Cliente/Servidor", "Broadcast", "Multicast"], a: 0, exp: "Pub/Sub com broker.", td: { conceito: "Desacopla quem envia de quem recebe.", dissecao: "Modelo de mensageria.", porqueErrada: "Cliente/Servidor é HTTP.", porqueCerta: "Pub/Sub via broker." } },
+          { q: "O que QoS 0 significa?", o: ["No máximo 1 vez (fire and forget)", "Exatamente 1 vez", "Pelo menos 1 vez", "Sem garantia"], a: 0, exp: "Até 1 vez, sem confirmação.", td: { conceito: "MQTT define 3 níveis de QoS.", dissecao: "Nível mais baixo.", porqueErrada: "QoS 2 é exatamente 1. QoS 1 é ao menos 1.", porqueCerta: "Envia uma vez e esquece." } }
+        ]
+      }
+    ]
+  },
+  {
+    id: 5, title: "Segurança", icon: "🔒", color: "#ff4b4b", desc: "Riscos e proteção",
+    lessons: [
+      {
+        title: "Riscos",
+        questions: [
+          { q: "Garante que os dados só podem ser lidos pelos terminais corretos?", o: ["Confidencialidade", "Disponibilidade", "Integridade", "Autenticidade"], a: 0, exp: "Confidencialidade.", td: { conceito: "Pilares CIDA.", dissecao: "Verbo 'ler' aponta para sigilo.", porqueErrada: "Integridade é não alteração.", porqueCerta: "Confidencialidade garante sigilo." } },
+          { q: "Ataque que intercepta tráfego entre dispositivo e nuvem?", o: ["Man-in-the-Middle", "Phishing", "SQL Injection", "Brute Force"], a: 0, exp: "MITM.", td: { conceito: "Atacante 'no meio'.", dissecao: "Interceptar tráfego.", porqueErrada: "Phishing engana. SQL ataca banco.", porqueCerta: "MITM lê e altera mensagens." } }
+        ]
+      }
+    ]
+  },
+  {
+    id: 6, title: "Hardware: ESP32 & Raspberry", icon: "🔧", color: "#1cb0f6", desc: "Placas e sensores",
+    lessons: [
+      {
+        title: "ESP32",
+        questions: [
+          { q: "O ESP32 é baseado em qual microprocessador?", o: ["Tensilica Xtensa LX6", "ARM Cortex-A53", "Intel Core i5", "Broadcom BCM2835"], a: 0, exp: "Xtensa LX6 dual-core.", td: { conceito: "ESP32 = Xtensa LX6.", dissecao: "Arquitetura do chip.", porqueErrada: "Cortex é Raspberry. BCM é Raspberry Pi 1.", porqueCerta: "Xtensa LX6 dual-core." } },
+          { q: "O ESP32 possui Bluetooth integrado?", o: ["Sim, 4.2 BLE", "Não", "Apenas módulo externo", "Somente 5.0"], a: 0, exp: "Sim, 4.2 BLE.", td: { conceito: "ESP32 tem Wi-Fi + BT.", dissecao: "Integração nativa no chip.", porqueErrada: "Não precisa de módulo. Não é 5.0.", porqueCerta: "Bluetooth 4.2 + BLE nativo." } }
+        ]
+      },
+      {
+        title: "Identificando componentes (visual)",
+        questions: [
+          {
+            q: "Qual placa está representada acima?",
+            image: `<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg"><rect x="40" y="30" width="220" height="120" rx="6" fill="#1a1a2e" stroke="#0f0f1e" stroke-width="2"/><rect x="60" y="50" width="60" height="40" fill="#333" rx="2"/><text x="90" y="75" text-anchor="middle" fill="#aaa" font-size="10" font-family="monospace">ESP-WROOM</text><rect x="60" y="100" width="80" height="20" rx="2" fill="#c9a227"/><circle cx="230" cy="50" r="8" fill="#4a90d9"/><rect x="220" y="100" width="25" height="20" fill="#aaa" rx="2"/></svg>`,
+            o: ["ESP32 DevKit", "Raspberry Pi 4", "Arduino Uno", "SONOFF Mini"],
+            a: 0, exp: "Módulo ESP-WROOM-32 e GPIO dourado.",
+            td: { conceito: "ESP32 DevKit tem módulo metálico ESP-WROOM.", dissecao: "3 pistas: ESP-WROOM, GPIO dourado, USB.", porqueErrada: "Raspberry tem 40 pinos em layout duplo.", porqueCerta: "É a ESP32 DevKit." }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 7, title: "FreeRTOS", icon: "⏱️", color: "#ce82ff", desc: "Sistema de tempo real",
+    lessons: [
+      {
+        title: "Conceitos",
+        questions: [
+          { q: "RTOS significa:", o: ["Real-Time Operating System", "Rapid Transfer", "Remote Task", "Random Time"], a: 0, exp: "Real-Time.", td: { conceito: "SO com prazos (deadlines).", dissecao: "Sigla exata.", porqueErrada: "Siglas inventadas.", porqueCerta: "Real-Time Operating System." } },
+          { q: "Hard Real-Time falha quando:", o: ["O prazo não é cumprido (ex: airbag)", "O Wi-Fi cai", "A memória enche", "O código tem bug"], a: 0, exp: "Perder deadline = falha total.", td: { conceito: "Hard, Firm, Soft.", dissecao: "Airbag é exemplo clássico.", porqueErrada: "Wi-Fi e memória não são deadlines.", porqueCerta: "Hard RT perder o prazo inutiliza." } }
+        ]
+      }
+    ]
+  },
+  {
+    id: 8, title: "SONOFF", icon: "💡", color: "#ffc800", desc: "Interruptores Wi-Fi",
+    lessons: [
+      {
+        title: "O que é",
+        questions: [
+          { q: "SONOFF fabrica que tipo de dispositivo?", o: ["Interruptores Wi-Fi de baixo custo", "Roteadores", "Servidores", "Câmeras"], a: 0, exp: "Interruptores Wi-Fi.", td: { conceito: "SONOFF = relés inteligentes.", dissecao: "Categoria do produto.", porqueErrada: "Não roteiam IP, não são servidores.", porqueCerta: "Interruptores Wi-Fi acessíveis." } },
+          { q: "Qual chip equipa a maioria dos SONOFF Wi-Fi?", o: ["ESP8266", "ESP32", "BCM2835", "CC2530"], a: 0, exp: "ESP8266.", td: { conceito: "Linha Wi-Fi = ESP8266.", dissecao: "Chip majoritário.", porqueErrada: "ESP32 é mais caro. CC2530 é Zigbee.", porqueCerta: "ESP8266." } }
+        ]
+      }
+    ]
+  }
+];
+
+const CHALLENGES = [
+  {
+    id: 'led', title: 'Acender um LED', desc: 'Arraste um LED e um resistor. Conecte ao GPIO 2 do ESP32.', difficulty: 'easy', icon: '💡', color: '#58cc02', components: ['esp32', 'led', 'resistor', 'gnd'],
+    goal: { requiredConnections: [
+      { from: { compType: 'esp32', pin: 'GPIO2' }, to: { compType: 'resistor', pin: 'A' } },
+      { from: { compType: 'resistor', pin: 'B' }, to: { compType: 'led', pin: '+' } },
+      { from: { compType: 'led', pin: '-' }, to: { compType: 'gnd', pin: 'GND' } }
+    ] }
+  },
+  {
+    id: 'ldr_led', title: 'Luz noturna (LDR + LED)', desc: 'LDR com divisor de tensão no GPIO 4 e LED no GPIO 2.', difficulty: 'medium', icon: '🌗', color: '#e67e22', components: ['esp32', 'ldr', 'resistor', 'led', 'gnd', 'vcc'],
+    goal: { requiredConnections: [
+      { from: { compType: 'vcc', pin: '3V3' }, to: { compType: 'ldr', pin: 'A' } },
+      { from: { compType: 'ldr', pin: 'B' }, to: { compType: 'esp32', pin: 'GPIO4' } },
+      { from: { compType: 'resistor', pin: 'A' }, to: { compType: 'esp32', pin: 'GPIO4' } },
+      { from: { compType: 'resistor', pin: 'B' }, to: { compType: 'gnd', pin: 'GND' } },
+      { from: { compType: 'esp32', pin: 'GPIO2' }, to: { compType: 'resistor', pin: 'A' } },
+      { from: { compType: 'resistor', pin: 'B' }, to: { compType: 'led', pin: '+' } },
+      { from: { compType: 'led', pin: '-' }, to: { compType: 'gnd', pin: 'GND' } }
+    ] }
+  }
+];
+
+const COMPONENTS = {
+  esp32: { name: 'ESP32', emoji: '📡', color: '#1e5a96', pins: ['GPIO0', 'GPIO2', 'GPIO4', 'GPIO5', '3V3', 'GND'] },
+  led: { name: 'LED', emoji: '💡', color: '#ff4b4b', pins: ['+', '-'] },
+  resistor: { name: 'Resistor', emoji: '🟫', color: '#c9a227', pins: ['A', 'B'] },
+  ldr: { name: 'LDR', emoji: '🌗', color: '#e67e22', pins: ['A', 'B'] },
+  gnd: { name: 'GND', emoji: '⏚', color: '#333', pins: ['GND'] },
+  vcc: { name: '3V3', emoji: '⚡', color: '#e74c3c', pins: ['3V3'] },
+};
+
+const state = { xp: 0, gems: 0, hearts: 5, streak: 0, completed: {}, currentModule: null, currentLesson: 0, currentQuestion: 0, correctCount: 0, answered: false };
+const errorState = { errors: [], revising: null, reviewing: [] };
+const circuitState = { currentChallenge: null, placedComponents: [], connections: [], selectedPin: null, nextId: 1, completedChallenges: JSON.parse(localStorage.getItem('iot-duo-challenges') || '[]') };
+
+function $(id){ return document.getElementById(id); }
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); }
+function updateTopBar(){ $('streak').textContent = state.streak; $('gems').textContent = state.gems; $('hearts').textContent = state.hearts; $('xp').textContent = state.xp; }
+function saveState(){ const { currentModule, currentLesson, currentQuestion, correctCount, answered, ...persist } = state; localStorage.setItem('iot-duo', JSON.stringify(persist)); }
+function loadState(){ try{ const s = JSON.parse(localStorage.getItem('iot-duo')); if(s) Object.assign(state, s); }catch(e){} updateTopBar(); }
+
+function toggleTheme(){ document.body.classList.toggle('dark'); const isDark = document.body.classList.contains('dark'); localStorage.setItem('iot-duo-theme', isDark ? 'dark' : 'light'); $('theme-btn').textContent = isDark ? '☀️' : '🌙'; }
+function loadTheme(){ if(localStorage.getItem('iot-duo-theme') === 'dark'){ document.body.classList.add('dark'); $('theme-btn').textContent = '☀️'; } }
+function showToast(msg, type, duration){ const t = document.createElement('div'); t.className = 'toast ' + (type || 'info'); t.textContent = msg; $('toast-container').appendChild(t); requestAnimationFrame(() => t.classList.add('show')); setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, duration || 2500); }
+
+function renderModules(){
+  const list = $('modules-list'); list.innerHTML = '';
+  MODULES.forEach((mod, idx) => {
+    const done = state.completed[mod.id] || [];
+    const pct = (done.length / mod.lessons.length) * 100;
+    const locked = idx > 0 && !state.completed[MODULES[idx-1].id]?.length;
+    const completed = done.length === mod.lessons.length;
+    const div = document.createElement('div');
+    div.className = 'module' + (locked ? ' locked' : '') + (completed ? ' completed' : '');
+    div.innerHTML = `<div class="mod-icon" style="background:${mod.color}22;color:${mod.color}">${mod.icon}</div><div class="mod-info"><h3>${mod.title}</h3><p>${mod.desc}</p><div class="mod-progress"><div style="width:${pct}%"></div></div></div>${completed ? '<div class="check">✓</div>' : ''}`;
+    if(!locked) div.onclick = () => startModule(mod.id);
+    list.appendChild(div);
+  });
+}
+
+function startModule(modId){
+  const mod = MODULES.find(m => m.id === modId);
+  const done = state.completed[modId] || [];
+  let lessonIdx = 0;
+  for(let i=0; i<mod.lessons.length; i++){ if(!done.includes(i)){ lessonIdx = i; break; } }
+  state.currentModule = modId; state.currentLesson = lessonIdx; state.currentQuestion = 0; state.correctCount = 0; state.answered = false;
+  if(state.hearts <= 0){ return alert('Sem vidas!'); }
+  showScreen('lesson'); renderQuestion();
+}
+
+function renderQuestion(){
+  const mod = MODULES.find(m => m.id === state.currentModule);
+  const lesson = mod.lessons[state.currentLesson];
+  const q = lesson.questions[state.currentQuestion];
+  if(!q){ finishLesson(); return; }
+  
+  const qc = document.querySelector('.question-card');
+  let inner = `<div class="q-tag">Questão ${state.currentQuestion + 1} de ${lesson.questions.length}</div>`;
+  if(q.image) inner += `<div class="q-image">${q.image}</div>`;
+  inner += `<div class="q-text">${q.q}</div><div class="options" id="options"></div>`;
+  qc.innerHTML = inner;
+  
+  $('lesson-progress').style.width = ((state.currentQuestion) / lesson.questions.length * 100) + '%';
+  q.o.forEach((opt, i) => {
+    const btn = document.createElement('button'); btn.className = 'opt'; btn.textContent = opt; btn.onclick = () => selectAnswer(i); $('options').appendChild(btn);
+  });
+  state.answered = false;
+}
+
+function selectAnswer(idx){
+  if(state.answered) return; state.answered = true;
+  const mod = MODULES.find(m => m.id === state.currentModule);
+  const lesson = mod.lessons[state.currentLesson];
+  const q = lesson.questions[state.currentQuestion];
+  const opts = $('options').children;
+  Array.from(opts).forEach(b => b.disabled = true);
+  
+  if(idx === q.a){
+    opts[idx].classList.add('correct'); state.correctCount++; state.xp += 10; state.gems += 1; if(state.streak === 0) state.streak = 1; updateTopBar(); showFeedback(true, q.exp);
+  } else {
+    opts[idx].classList.add('wrong'); opts[q.a].classList.add('correct'); state.hearts = Math.max(0, state.hearts - 1); updateTopBar();
+    if(!errorState.errors.some(e => e.q === q.q)){
+      const ctx = `${mod.title} • ${lesson.title}`;
+      errorState.errors.push({ q: q.q, wrong: q.o[idx], right: q.o[q.a], exp: q.exp, td: q.td || null, ctx });
+      localStorage.setItem('iot-duo-errors', JSON.stringify(errorState.errors));
+      updateReviewBadge();
+    }
+    showFeedback(false, q.exp);
+  }
+  saveState();
+}
+
+function showFeedback(correct, exp){
+  const fb = $('feedback'); fb.className = 'feedback show' + (correct ? '' : ' wrong');
+  $('fb-title').textContent = correct ? '✅ Muito bem!' : '❌ Quase!';
+  $('fb-text').textContent = exp; $('fb-btn').textContent = correct ? 'CONTINUAR' : 'ENTENDI';
+}
+function nextQuestion(){ $('feedback').classList.remove('show'); const mod = MODULES.find(m => m.id === state.currentModule); if(state.currentQuestion + 1 < mod.lessons[state.currentLesson].questions.length){ state.currentQuestion++; renderQuestion(); } else { finishLesson(); } }
+
+function finishLesson(){
+  const mod = MODULES.find(m => m.id === state.currentModule);
+  if(!state.completed[mod.id]) state.completed[mod.id] = [];
+  if(!state.completed[mod.id].includes(state.currentLesson)) state.completed[mod.id].push(state.currentLesson);
+  saveState();
+  const total = mod.lessons[state.currentLesson].questions.length;
+  $('res-emoji').textContent = state.correctCount === total ? '🏆' : '🎉';
+  $('res-title').textContent = state.correctCount === total ? 'Perfeito!' : 'Lição completa!';
+  $('res-sub').textContent = `Módulo: ${mod.title}`;
+  $('res-xp').textContent = '+' + (state.correctCount * 10);
+  $('res-score').textContent = `${state.correctCount}/${total}`;
+  showScreen('result');
+}
+function quitLesson(){ state.hearts = 5; updateTopBar(); showScreen('home'); renderModules(); }
+function goHome(){ showScreen('home'); renderModules(); if(state.hearts <= 0) state.hearts = 5; updateTopBar(); }
+
+function updateReviewBadge(){ const n = errorState.errors.length; if(n > 0){ $('review-badge').classList.remove('hidden'); $('review-count').textContent = n > 99 ? '99+' : n; } else { $('review-badge').classList.add('hidden'); } }
+function loadErrors(){ try{ const e = JSON.parse(localStorage.getItem('iot-duo-errors')); if(e) errorState.errors = e; }catch(e){} updateReviewBadge(); }
+
+function openReview(){ showScreen('review'); renderErrorList(); }
+function renderErrorList(){
+  const list = $('review-list'); list.innerHTML = '';
+  if(errorState.errors.length === 0){ list.innerHTML = `<div style="text-align:center;padding:40px;color:#777"><h3>Nenhum erro!</h3><p>Continue estudando.</p></div>`; return; }
+  errorState.errors.forEach((err, i) => {
+    const card = document.createElement('div'); card.className = 'error-card';
+    card.innerHTML = `<div style="font-size:11px; font-weight:800; color:var(--blue); margin-bottom:6px;">${err.ctx}</div><div style="font-weight:700; font-size:15px;">${err.q}</div>`;
+    card.onclick = () => startTopDown(i);
+    list.appendChild(card);
+  });
+}
+
+function startTopDown(startIdx){ errorState.reviewing = errorState.errors.slice(); errorState.revising = startIdx; renderTopDown(); showScreen('topdown'); }
+function renderTopDown(){
+  const err = errorState.reviewing[errorState.revising]; if(!err) return openReview();
+  const td = err.td || { conceito: "Conceito central do módulo.", dissecao: "A questão testa um ponto específico.", porqueErrada: `"${err.wrong}" é uma armadilha.`, porqueCerta: `"${err.right}" está correta porque ${err.exp}` };
+  
+  $('td-content').innerHTML = `
+    <div class="q-text" style="font-size:18px;">${err.q}</div>
+    <div class="td-block red"><div style="font-size:11px;font-weight:900;color:var(--red)">❌ SUA RESPOSTA</div>${err.wrong}</div>
+    <div class="td-block green"><div style="font-size:11px;font-weight:900;color:var(--green-dark)">✅ CORRETA</div>${err.right}</div>
+    <div class="td-block"><div style="font-size:11px;font-weight:900;color:var(--blue)">🔭 CONCEITO MAIOR</div><p style="margin-top:6px;">${td.conceito}</p></div>
+    <div class="td-block orange"><div style="font-size:11px;font-weight:900;color:var(--orange)">🧩 DISSECAÇÃO</div><p style="margin-top:6px;">${td.dissecao}</p></div>
+    <div class="td-block red"><div style="font-size:11px;font-weight:900;color:var(--red)">❌ POR QUE ESTÁ ERRADA</div><p style="margin-top:6px;">${td.porqueErrada}</p></div>
+    <div class="td-block green"><div style="font-size:11px;font-weight:900;color:var(--green-dark)">✅ POR QUE ESTÁ CERTA</div><p style="margin-top:6px;">${td.porqueCerta}</p></div>
+    <button class="btn" style="margin-top:20px;" onclick="nextTopDown()">MARCAR COMO REVISADO ✓</button>
+  `;
+}
+function nextTopDown(){
+  const err = errorState.reviewing[errorState.revising];
+  errorState.errors = errorState.errors.filter(e => e.q !== err.q);
+  localStorage.setItem('iot-duo-errors', JSON.stringify(errorState.errors));
+  updateReviewBadge();
+  if(errorState.revising < errorState.reviewing.length - 1){ errorState.revising++; renderTopDown(); }
+  else { showScreen('review'); openReview(); }
+}
+
+function openDashboard(){
+  let tA = 0, tE = 0;
+  errorState.errors.forEach(e => tE++); 
+  tA = (state.xp / 10) || 0; 
+  const total = tA + tE;
+  const pct = total === 0 ? 0 : Math.round((tA / total) * 100);
+  $('donut-pct').textContent = pct + '%';
+  $('donut').style.background = `conic-gradient(var(--green) ${pct}%, var(--gray) ${pct}%)`;
+  showScreen('dashboard');
+}
+
+function openChallenges(){ showScreen('challenges'); renderChallengeList(); }
+function renderChallengeList(){
+  const list = $('challenge-list'); list.innerHTML = '';
+  CHALLENGES.forEach(ch => {
+    const done = circuitState.completedChallenges.includes(ch.id);
+    const card = document.createElement('div'); card.className = 'challenge-card' + (done ? ' completed' : '');
+    card.innerHTML = `<div class="challenge-icon" style="background:${ch.color}22;color:${ch.color}; font-size:28px; width:50px; height:50px; display:flex; align-items:center; justify-content:center; border-radius:12px; flex-shrink:0;">${ch.icon}</div><div style="flex:1;"><h3 style="font-size:15px;">${ch.title}</h3><p style="font-size:12px; color:#777;">${ch.desc}</p></div><div style="font-size:11px; font-weight:900; background:${done?'#d7ffb8':'#eee'}; color:${done?'#3a8a00':'#666'}; padding:4px 8px; border-radius:8px;">${done?'✓ FEITO':'JOGAR'}</div>`;
+    card.onclick = () => startChallenge(ch.id); list.appendChild(card);
+  });
+}
+
+function startChallenge(id){
+  const ch = CHALLENGES.find(c => c.id === id); if(!ch) return;
+  circuitState.currentChallenge = ch; circuitState.placedComponents = []; circuitState.connections = []; circuitState.selectedPin = null;
+  $('circuit-title').textContent = ch.icon + ' ' + ch.title; $('circuit-desc').textContent = ch.desc;
+  renderToolbox(ch.components); clearCanvas(); showScreen('circuit-editor');
+}
+
+function renderToolbox(compTypes){
+  const tb = $('toolbox'); tb.innerHTML = '';
+  compTypes.forEach(type => {
+    const comp = COMPONENTS[type]; const el = document.createElement('div'); el.className = 'tool-item';
+    el.innerHTML = `<div style="font-size:24px;">${comp.emoji}</div><div style="font-size:10px; font-weight:800; text-align:center;">${comp.name}</div>`;
+    el.dataset.compType = type; el.addEventListener('pointerdown', startDragFromToolbox); tb.appendChild(el);
+  });
+}
+
+let _dragData = null;
+function startDragFromToolbox(e){
+  e.preventDefault(); const type = e.currentTarget.dataset.compType;
+  const ghost = document.createElement('div'); ghost.style.cssText = `position:fixed; pointer-events:none; z-index:1000; background:${COMPONENTS[type].color}22; border:2px solid ${COMPONENTS[type].color}; border-radius:12px; padding:8px 12px; font-size:22px; opacity:.85; transform:translate(-50%,-50%);`;
+  ghost.textContent = COMPONENTS[type].emoji; document.body.appendChild(ghost);
+  const move = (ev) => { ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px'; };
+  const up = (ev) => {
+    ghost.remove(); document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up);
+    const canvas = $('canvas'); const rect = canvas.getBoundingClientRect();
+    if(ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom){ placeComponent(type, ev.clientX - rect.left, ev.clientY - rect.top); }
+  };
+  move(e); document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+}
+
+function placeComponent(compType, x, y){
+  const comp = COMPONENTS[compType]; const id = 'c' + (circuitState.nextId++);
+  const el = document.createElement('div'); el.className = 'placed'; el.dataset.id = id; el.style.left = Math.max(10, x - 40) + 'px'; el.style.top = Math.max(10, y - 30) + 'px';
+  let pinsHtml = '';
+  comp.pins.forEach(pin => { pinsHtml += `<div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><div class="pin" data-comp="${id}" data-pin="${pin}"></div><div style="font-size:7px;color:#666;font-weight:700;">${pin}</div></div>`; });
+  el.innerHTML = `<div style="font-size:22px;">${comp.emoji}</div><div style="font-size:10px;font-weight:900;color:${comp.color};text-align:center;">${comp.name}</div><div class="pins">${pinsHtml}</div>`;
+  el.addEventListener('pointerdown', startDragOnCanvas);
+  el.querySelectorAll('.pin').forEach(pinEl => { pinEl.addEventListener('pointerdown', onPinPointerDown); });
+  $('canvas').appendChild(el); circuitState.placedComponents.push({ id, compType, x, y, domEl: el });
+}
+
+function startDragOnCanvas(e){
+  if(e.target.classList.contains('pin')) return; e.preventDefault(); const el = e.currentTarget;
+  const canvas = $('canvas'); const canvasRect = canvas.getBoundingClientRect();
+  const startX = e.clientX; const startY = e.clientY; const origLeft = parseFloat(el.style.left); const origTop = parseFloat(el.style.top);
+  const move = (ev) => { el.style.left = Math.max(0, Math.min(canvasRect.width - el.offsetWidth, origLeft + (ev.clientX - startX))) + 'px'; el.style.top = Math.max(0, Math.min(canvasRect.height - el.offsetHeight, origTop + (ev.clientY - startY))) + 'px'; redrawWires(); };
+  const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
+  move(e); document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+}
+
+function onPinPointerDown(e){
+  e.stopPropagation(); e.preventDefault(); const pinEl = e.currentTarget; const compId = pinEl.dataset.comp; const pinId = pinEl.dataset.pin;
+  if(!circuitState.selectedPin){ circuitState.selectedPin = { compId, pin: pinId }; pinEl.classList.add('connected'); }
+  else {
+    const from = circuitState.selectedPin; const to = { compId, pin: pinId };
+    if(from.compId === to.compId && from.pin === to.pin){ circuitState.selectedPin = null; document.querySelectorAll('.pin.connected').forEach(p => p.classList.remove('connected')); return; }
+    const exists = circuitState.connections.some(c => (c.fromComp === from.compId && c.fromPin === from.pin && c.toComp === to.compId && c.toPin === to.pin) || (c.fromComp === to.compId && c.fromPin === to.pin && c.toComp === from.compId && c.toPin === from.pin));
+    if(!exists) circuitState.connections.push({ fromComp: from.compId, fromPin: from.pin, toComp: to.compId, toPin: to.pin });
+    circuitState.selectedPin = null; document.querySelectorAll('.pin.connected').forEach(p => p.classList.remove('connected')); redrawWires();
+  }
+}
+
+function redrawWires(){
+  const svg = $('wires-svg'); svg.querySelectorAll('.wire').forEach(w => w.remove());
+  const canvasRect = $('canvas').getBoundingClientRect();
+  circuitState.connections.forEach(conn => {
+    const fromEl = document.querySelector(`.pin[data-comp="${conn.fromComp}"][data-pin="${conn.fromPin}"]`); const toEl = document.querySelector(`.pin[data-comp="${conn.toComp}"][data-pin="${conn.toPin}"]`);
+    if(!fromEl || !toEl) return;
+    const fRect = fromEl.getBoundingClientRect(); const tRect = toEl.getBoundingClientRect();
+    const x1 = fRect.left - canvasRect.left + fRect.width / 2; const y1 = fRect.top - canvasRect.top + fRect.height / 2;
+    const x2 = tRect.left - canvasRect.left + tRect.width / 2; const y2 = tRect.top - canvasRect.top + tRect.height / 2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); const midX = (x1 + x2) / 2;
+    path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`); path.setAttribute('class', 'wire'); svg.appendChild(path);
+  });
+}
+
+function clearCanvas(){
+  $('canvas').querySelectorAll('.placed').forEach(el => el.remove()); $('wires-svg').querySelectorAll('.wire').forEach(w => w.remove());
+  circuitState.placedComponents = []; circuitState.connections = []; circuitState.selectedPin = null;
+}
+function resetCanvas(){ if(confirm('Limpar circuito?')) clearCanvas(); }
+function exitCircuit(){ clearCanvas(); openChallenges(); }
+
+function validateCircuit(){
+  const ch = circuitState.currentChallenge; if(!ch) return;
+  const feedback = []; const usedConnections = new Set();
+  ch.goal.requiredConnections.forEach(expected => {
+    let foundIdx = -1;
+    circuitState.connections.forEach((conn, idx) => {
+      if(usedConnections.has(idx)) return;
+      const fromComp = circuitState.placedComponents.find(p => p.id === conn.fromComp); const toComp = circuitState.placedComponents.find(p => p.id === conn.toComp);
+      if(!fromComp || !toComp) return;
+      const match1 = fromComp.compType === expected.from.compType && conn.fromPin === expected.from.pin && toComp.compType === expected.to.compType && conn.toPin === expected.to.pin;
+      const match2 = toComp.compType === expected.from.compType && conn.toPin === expected.from.pin && fromComp.compType === expected.to.compType && conn.fromPin === expected.to.pin;
+      if(match1 || match2) foundIdx = idx;
+    });
+    const label = `${expected.from.compType.toUpperCase()} (${expected.from.pin}) ↔ ${expected.to.compType.toUpperCase()} (${expected.to.pin})`;
+    if(foundIdx >= 0){ usedConnections.add(foundIdx); feedback.push({ ok: true, text: label }); } else { feedback.push({ ok: false, text: label }); }
+  });
+  const extra = circuitState.connections.length - usedConnections.size;
+  if(extra > 0) feedback.push({ ok: false, text: `⚠️ ${extra} conexão(ões) extra(s)` });
+  const okCount = feedback.filter(f => f.ok).length; const totalChecks = ch.goal.requiredConnections.length;
+  const allOk = okCount === totalChecks && extra <= 0;
+  
+  $('result-emoji').textContent = allOk ? '🏆' : '😅';
+  $('result-title').textContent = allOk ? 'Circuito correto!' : 'Quase lá!';
+  $('result-desc').textContent = allOk ? 'Você fez todas as conexões!' : `Acertou ${okCount} de ${totalChecks}.`;
+  $('result-feedback').innerHTML = feedback.map(f => `<li style="color:${f.ok?'var(--green-dark)':'var(--red)'}; list-style:none; padding:4px 0;">${f.ok?'✓':'✗'} ${f.text}</li>`).join('');
+  
+  if(allOk && !circuitState.completedChallenges.includes(ch.id)){
+    circuitState.completedChallenges.push(ch.id); localStorage.setItem('iot-duo-challenges', JSON.stringify(circuitState.completedChallenges));
+    state.xp += 50; state.gems += 5; updateTopBar(); saveState();
+  }
+  $('circuit-result').classList.add('show');
+}
+function closeResult(){ $('circuit-result').classList.remove('show'); if(circuitState.completedChallenges.includes(circuitState.currentChallenge.id)) openChallenges(); }
+
+loadTheme(); loadState(); loadErrors(); renderModules();
+</script>
+</body>
+</html>
